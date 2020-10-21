@@ -103,10 +103,10 @@ nunjucks.configure("views/", {
 app.use(
   cors({ allowedHeaders: ["X-Requested-With", "Accept", "Content-Type"] })
 );
+app.use(express.json());
 // app.set("views", __dirname + "/views");
 app.enable("jsonp callback");
 app.use(express.static("public"));
-
 app.use(express.urlencoded({ extended: false }));
 app.use(
   favicon(__dirname + "/public/img/favicon.png", {
@@ -129,15 +129,20 @@ app.get("/", function (req, res) {
   var currDate = new Date();
   res.render("index.html", {
     docs: apiDocsHtml,
-    sharesFact: fact.getFact(numShares, "trivia", {
+    sharesFact: fact.getFact({
       notfound: "floor",
       fragment: true,
+      type: "trivia",
+      number: numShares,
     }),
     numShares: numShares,
     dateFact: {
       day: currDate.getDate(),
       month: currDate.getMonth() + 1,
-      data: fact.getFact(utils.dateToDayOfYear(currDate), "date", {}),
+      data: fact.getFact({
+        type: "date",
+        number: utils.dateToDayOfYear(currDate),
+      }),
     },
   });
 });
@@ -154,11 +159,5 @@ app.post("/submit", function (req, res) {
   router.appendToFile("./suggestions.json", JSON.stringify(req.body) + "\n");
   res.send(req.body);
 });
-
-// Main
-
-const PORT = 8124;
-app.listen(PORT);
-console.log("Express server listening on port %d in %s mode", PORT, nodeEnv);
 
 module.exports = app;
