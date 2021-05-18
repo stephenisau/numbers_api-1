@@ -21,14 +21,25 @@
 const _ = require("underscore");
 const fs = require("fs");
 const path = require("path");
+const [MIN_LENGTH, MAX_LENGTH] = [20, 150];
+
+/**
+ * generates an object containing a key for each number and an array of objects (number fact of that key) as the value
+ * @param {object} out - an empty object that will contain number facts for the number category
+ * @param {string} pathname - path to desired the local directory for .txt files that contain facts
+ * @param {function definition} callback - function for data normalization, standardizes and cleans data to desired format
+ */
 
 function reader_norm(out, pathname, callback) {
-  // TODO: more reliable checking if file is data file
+  // TODO: more reliable checking if file is data file DONE
   let files = fs.readdirSync(pathname);
 
   files.forEach((file) => {
     let data;
     let numbers;
+    if (!file.includes(".txt")) {
+      console.error(`Not a data file: ${pathname + file}`);
+    }
     try {
       data = fs.readFileSync(pathname + file, {
         encoding: "utf8",
@@ -50,51 +61,41 @@ function reader_norm(out, pathname, callback) {
     try {
       _.each(numbers, function (number_data, number_key) {
         let float_key = parseFloat(number_key, 10);
-        if (isNaN(float_key)) {
-          console.warn(
-            `Skipping invalid number_key, ${number_key} in file ${
-              pathname + file
-            }`
-          );
-          return;
-        }
 
-        // TODO: handle this during normalization
-        if (!number_data || number_data.length === 0) {
-          // console.warn('Skipping empty number_data for float_key', float_key, 'in file', pathname + file);
-          return;
-        }
-        if (!(float_key in out)) {
-          out[float_key] = [];
-        }
-        let o = out[float_key];
-        number_data.forEach((element) => {
-          if (!element.text || !element.text.length) {
-            console.warn(
-              `Skipping empty file (element.text is falsey) ${pathname + file}`
-            );
-            return;
+        // if parsed data from numbers is valid
+        // proceed to element normalization
+        if (normalizeNumberData(float_key, number_data)) {
+          // if key doesnt current exist in object, create it.
+          if (!(float_key in out)) {
+            out[float_key] = [];
           }
-          if (callback) {
-            element = callback(element);
-          }
-          if (!element) {
-            return;
-          }
-          const [MIN_LENGTH, MAX_LENGTH] = [20, 150];
-          if (!element.manual) {
-            if (
-              element.text.length < MIN_LENGTH ||
-              element.text.length > MAX_LENGTH
-            ) {
+          // o -> array of number fact objects at the given key
+          let o = out[float_key];
+
+          // iterate over each number fact in out property value
+          number_data.forEach((element) => {
+            if (!element.text || !element.text.length) {
+              console.warn(
+                `Skipping empty file (element.text is falsey) ${
+                  pathname + file
+                }`
+              );
               return;
             }
+            if (callback) {
+              element = callback(element);
+            }
+            if (!element) {
+              return;
+            }
+
+            o.push(element);
+          });
+          // if after iterating no facts were pushed to o
+          // delete the the object key/value
+          if (o.length === 0) {
+            delete out[float_key];
           }
-          o.push(element);
-        });
-        // TODO: should probably be performing this deletion also for early returns
-        if (o.length === 0) {
-          delete out[float_key];
         }
       });
     } catch (e) {
@@ -103,12 +104,28 @@ function reader_norm(out, pathname, callback) {
   });
 }
 
-// Format is line separated facts of format <#> <t|m|d|y> <fact>
+/**
+ * generates a object where each property is an array of number facts for that number category
+ * 
+ * @param {object } outs -  object of objects where each property is the normalized fact data generated from reader norm. 
+ * e.g. -
+          * {
+              d: list of date number facts,
+              y: list of year number facts,
+              m: list of math number facts,
+              t: list of trivia number facts,
+            };
+ * @param {string} pathname - path to desired the local directory for .txt files that contain facts 
+ * @param {object} callback - object of callbacks for data normalization o f each data type.
+ */
 function reader_manual(outs, pathname, callbacks) {
   // TODO: more reliable checking if file is data file
   let files = fs.readdirSync(pathname);
   files.forEach((file) => {
     let data;
+    if (!file.includes(".txt")) {
+      console.error(`Not a data file: ${pathname + file}`);
+    }
     try {
       data = fs.readFileSync(pathname + file, {
         encoding: "utf8",
@@ -180,8 +197,40 @@ function reader_manual(outs, pathname, callbacks) {
   });
 }
 
+/**
+ * validates and normalizes data from number data file.
+ *
+ * @param {num} key - parsed number from file
+ * @param {object} value - array of objects, where each obj is a number fact
+ * @returns true if data is valid, false otherwise
+ */
+function normalizeNumberData(key, value) {
+  if (isNaN(key)) {
+    console.warn(
+      `Skipping invalid number_key, ${number_key} in file ${pathname + file}`
+    );
+    return false;
+  }
+
+  if (!value || value.length === 0) {
+    return false;
+  }
+  return true;
+}
+
 let countBad = 0;
-function normalize_common(element) {
+/**
+ * 
+ * @param {object} element - value of number key 
+ *  -e.g. {
+            text: "the dominant Japanese brand name of NEC's personal computers in  the 1980s",
+            self: false,
+            manual: true
+          }
+ *      
+ * @returns normalized element
+ */
+function normalizeElement(element) {
   // do not return results that contain the number itself
   if (element.self) {
     return undefined;
@@ -208,18 +257,25 @@ function normalize_common(element) {
     // likely complex grammar that we do not support
     return undefined;
   }
+
+  if (!element.manual) {
+    if (element.text.length < MIN_LENGTH || element.text.length > MAX_LENGTH) {
+      return undefined;
+    }
+  }
+
   element.text = text;
   return element;
 }
 
 let date = {};
 reader_norm(date, "models/date/norm/", function (element) {
-  return normalize_common(element);
+  return normalizeElement(element);
 });
 
 let year = {};
 reader_norm(year, "models/year/norm/", function (element) {
-  return normalize_common(element);
+  return normalizeElement(element);
 });
 
 let trivia = {};
@@ -227,7 +283,7 @@ let trivia_pathname = "models/trivia/";
 reader_norm(trivia, "models/trivia/norm/", function (element) {
   // TODO: include back non-manual results
   if (element.manual) {
-    return normalize_common(element);
+    return normalizeElement(element);
   } else {
     return undefined;
   }
@@ -235,7 +291,7 @@ reader_norm(trivia, "models/trivia/norm/", function (element) {
 
 let math = {};
 reader_norm(math, "models/math/norm/", function (element) {
-  return normalize_common(element);
+  return normalizeElement(element);
 });
 
 let outs = {
@@ -245,10 +301,10 @@ let outs = {
   t: trivia,
 };
 let callbacks = {
-  d: normalize_common,
-  y: normalize_common,
-  m: normalize_common,
-  t: normalize_common,
+  d: normalizeElement,
+  y: normalizeElement,
+  m: normalizeElement,
+  t: normalizeElement,
 };
 reader_manual(outs, "models/manual/", callbacks);
 
@@ -273,7 +329,7 @@ reader_manual(outs, "models/manual/", callbacks);
 module.exports = {
   reader_norm,
   reader_manual,
-  normalize_common,
+  normalizeElement,
   math,
   trivia,
   date,

@@ -89,7 +89,7 @@ describe("getRandomApiNum() with type 'year'", () => {
 
   test("return random number greater than 2010", function () {
     let greaterThanMin = getRandomApiNum({ min: 2010, type: "year" });
-    expect(greaterThanMin).toBeGreaterThan(2010);
+    expect(greaterThanMin).toBeGreaterThan(2009);
   });
 
   test("return random number less than 2010", function () {
@@ -160,7 +160,7 @@ describe("getSentence() for type 'year'", () => {
       },
     });
     expect(sentence).toBe(
-      "10000000000 is the year that nothing remarkable happened."
+      "10000000000 will be the year that nothing remarkable happened."
     );
   });
 });
@@ -223,27 +223,79 @@ describe("getSentence() for type 'date' ", function () {
 });
 
 describe("getDefaultMsg() for all 4 types", function () {
-  test("random default msg for type:'year'", function () {
-    const yearMsgs = [
-      "9999999999 is the year that nothing remarkable happened.",
-      "9999999999 is the year that the Earth probably went around the Sun.",
-      "9999999999 is the year that nothing interesting came to pass.",
-      "9999999999 is the year that we do not know what happened.",
+  test("random default msg for type:'year' in the future", function () {
+    let yearMsgs = [
+      "9999999999 will be the year that nothing remarkable happened.",
+      "9999999999 will be the year that the Earth probably went around the Sun.",
+      "9999999999 will be the year that nothing interesting came to pass.",
+      "9999999999 will be the year that we do not know what happened.",
     ];
     const sentence = getDefaultMsg({
       number: 9999999999,
       type: "year",
     });
+
+    yearMsgs = yearMsgs.map(
+      (msg) =>
+        msg +
+        " Have a better fact? Submit one at github.com/rithmschool/numbers_api."
+    );
+    expect(yearMsgs.includes(sentence)).toEqual(true);
+  });
+
+  test("random default msg for type:'year' in the past AD", function () {
+    let yearMsgs = [
+      "696 is the year that nothing remarkable happened.",
+      "696 is the year that the Earth probably went around the Sun.",
+      "696 is the year that nothing interesting came to pass.",
+      "696 is the year that we do not know what happened.",
+    ];
+    const sentence = getDefaultMsg({
+      number: 696,
+      type: "year",
+    });
+
+    yearMsgs = yearMsgs.map(
+      (msg) =>
+        msg +
+        " Have a better fact? Submit one at github.com/rithmschool/numbers_api."
+    );
+    expect(yearMsgs.includes(sentence)).toEqual(true);
+  });
+
+  test("random default msg for type:'year' in the past BC", function () {
+    let yearMsgs = [
+      "696 BC is the year that nothing remarkable happened.",
+      "696 BC is the year that the Earth probably went around the Sun.",
+      "696 BC is the year that nothing interesting came to pass.",
+      "696 BC is the year that we do not know what happened.",
+    ];
+    const sentence = getDefaultMsg({
+      number: -696,
+      type: "year",
+    });
+
+    yearMsgs = yearMsgs.map(
+      (msg) =>
+        msg +
+        " Have a better fact? Submit one at github.com/rithmschool/numbers_api."
+    );
     expect(yearMsgs.includes(sentence)).toEqual(true);
   });
 
   test("random default msg for type:'math' & type:'trivia'", function () {
-    const mathMsgs = [
+    let mathMsgs = [
       "9999999999 is an uninteresting number.",
       "9999999999 is a boring number.",
       "9999999999 is an unremarkable number.",
-      "9999999999 is a number for which we're missing a fact (submit one to numbersapi at google mail!).",
+      "9999999999 is a number for which we're missing a fact.",
     ];
+    mathMsgs = mathMsgs.map(
+      (msg) =>
+        msg +
+        " Have a better fact? Submit one at github.com/rithmschool/numbers_api."
+    );
+
     const sentence = getDefaultMsg({
       number: 9999999999,
       type: "math",
@@ -257,7 +309,7 @@ describe("getDefaultMsg() for all 4 types", function () {
       type: "date",
     });
     expect(sentence).toBe(
-      "January 1st is the day that no newsworthy events happened."
+      "January 1st is the day that no newsworthy events happened. Have a better fact? Submit one at github.com/rithmschool/numbers_api."
     );
   });
 });
